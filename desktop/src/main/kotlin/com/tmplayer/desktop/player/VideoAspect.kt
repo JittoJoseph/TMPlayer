@@ -37,6 +37,38 @@ internal object VideoAspect {
     }
 
     private fun format(aspect: Double): String = String.format(java.util.Locale.ROOT, "%.6f", aspect)
+
+    /**
+     * The size in pixels to give mpv's surface inside a [boxWidth] by [boxHeight] box, or null for
+     * the whole box. Where the picture leaves bars (Fit and the fixed shapes), the surface is the
+     * picture alone and the bars are the player's own black backdrop.
+     *
+     * mpv paints its bars with a GPU clear. On Intel Xe that clear can be a compressed "fast
+     * clear" that writes no pixels, and Skia, reading the shared texture on its own D3D12 device,
+     * then saw whatever the memory held: random colours flashing in the bars of a fullscreen
+     * video on an external monitor (2026-11-06). With the picture covering the whole surface, every
+     * pixel is drawn by mpv's shader and none is left to a clear.
+     *
+     * Crop and Stretch fill the box anyway; a zoom and 3D draw outside the picture's own shape;
+     * a size not known yet has no shape to give. Those keep the whole box, as before.
+     */
+    fun surfaceSize(
+        scale: VideoScale,
+        stereoOn: Boolean,
+        zoomed: Boolean,
+        boxWidth: Int,
+        boxHeight: Int,
+        videoWidth: Int,
+        videoHeight: Int,
+    ): Pair<Int, Int>? {
+        if (stereoOn || zoomed || scale == VideoScale.Crop || scale == VideoScale.Stretch) return null
+        if (boxWidth <= 0 || boxHeight <= 0 || videoWidth <= 0 || videoHeight <= 0) return null
+        val (w, h) = scale.pictureSize(boxWidth, boxHeight, videoWidth.toDouble() / videoHeight)
+        if (w <= 0 || h <= 0) return null
+        // No bars to leave out: the box is the picture.
+        if (w >= boxWidth && h >= boxHeight) return null
+        return w.coerceAtMost(boxWidth) to h.coerceAtMost(boxHeight)
+    }
 }
 
 /**

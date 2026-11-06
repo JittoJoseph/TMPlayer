@@ -1805,7 +1805,24 @@ fun PlayerScreen(
             }
             val casting = activeEngine as? com.tmplayer.desktop.cast.CastPlaybackEngine
             if (casting == null) {
-                (engine.local as? MpvPlaybackEngine)?.let { MpvMediampPlayerSurface(it.player, Modifier.fillMaxSize()) }
+                (engine.local as? MpvPlaybackEngine)?.let {
+                    // The surface is the picture alone where it leaves bars, so mpv never paints
+                    // them (see VideoAspect.surfaceSize): the backdrop behind is the bars.
+                    val shaped = VideoAspect.surfaceSize(
+                        status.scale, status.stereo.on, zoom.zoomed,
+                        videoBox.width, videoBox.height, status.videoWidth, status.videoHeight,
+                    )
+                    val surface = if (shaped == null) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        val density = androidx.compose.ui.platform.LocalDensity.current
+                        with(density) {
+                            Modifier.align(androidx.compose.ui.Alignment.Center)
+                                .size(shaped.first.toDp(), shaped.second.toDp())
+                        }
+                    }
+                    MpvMediampPlayerSurface(it.player, surface)
+                }
             } else {
                 CastingPanel(casting, status, onPlayHere = ::playHere)
             }

@@ -99,4 +99,25 @@ class VideoAspectTest {
     fun `turning 3D off goes back to the chosen ratio, not to none`() {
         assertEquals("2.350000", VideoAspect.override(VideoScale.Ratio235, Stereo3d.OFF, 1920, 1080))
     }
+
+    @Test
+    fun `a wide video in a taller box gets a surface of the picture alone, centred bars left to the backdrop`() {
+        // 1920x802 fullscreen on a 3840x2160 monitor: 3840 wide, 1604 high, 278 rows of bar each side.
+        assertEquals(3840 to 1604, VideoAspect.surfaceSize(VideoScale.Fit, false, false, 3840, 2160, 1920, 802))
+        // A tall video in a wide box: bars at the sides.
+        assertEquals(608 to 1080, VideoAspect.surfaceSize(VideoScale.Fit, false, false, 1920, 1080, 1080, 1920))
+        // A fixed shape is the shape's.
+        assertEquals(1440 to 1080, VideoAspect.surfaceSize(VideoScale.Ratio4x3, false, false, 1920, 1080, 1920, 1080))
+    }
+
+    @Test
+    fun `the whole box where the picture fills it, cuts it, is zoomed, is 3D or is not known yet`() {
+        assertEquals(null, VideoAspect.surfaceSize(VideoScale.Fit, false, false, 1920, 1080, 1920, 1080))
+        assertEquals(null, VideoAspect.surfaceSize(VideoScale.Crop, false, false, 3840, 2160, 1920, 802))
+        assertEquals(null, VideoAspect.surfaceSize(VideoScale.Stretch, false, false, 3840, 2160, 1920, 802))
+        assertEquals(null, VideoAspect.surfaceSize(VideoScale.Fit, false, true, 3840, 2160, 1920, 802))
+        assertEquals(null, VideoAspect.surfaceSize(VideoScale.Fit, true, false, 3840, 2160, 1920, 802))
+        assertEquals(null, VideoAspect.surfaceSize(VideoScale.Fit, false, false, 3840, 2160, 0, 0))
+        assertEquals(null, VideoAspect.surfaceSize(VideoScale.Fit, false, false, 0, 0, 1920, 802))
+    }
 }
