@@ -149,6 +149,7 @@ const messages = new Map<number, Msg[]>([
             msg(clips, 'Odd Picture Clip.avi', { file: 'wmv2.avi' }),
             msg(clips, 'Odd Sound Clip.avi', { file: 'mpeg4-wma.avi' }),
             msg(clips, 'Cut Clip.avi', { file: 'cut.avi' }),
+            msg(clips, 'Tracks Clip.mkv', { file: 'tracks.mkv', duration: 8 }),
             msg(clips, 'Burning Clip.mp4', { file: 'h264-aac.mp4', ttl: 30 }),
             msg(clips, 'Withheld Clip.mp4', { file: 'h264-aac.mp4', withheld: true }),
             msg(clips, 'Notes.pdf', { size: 20_000 }),

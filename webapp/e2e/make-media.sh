@@ -29,6 +29,15 @@ LOWH264="-c:v libx264 -preset veryfast -b:v 60k -g 25 -pix_fmt yuv420p -c:a aac 
 ffmpeg $q $LONG $out $LOWH264 chapters.mkv
 ffmpeg $q $LONG $out $LOWH264 -movflags +faststart chapters.mp4
 rm chapters.txt
+# 8 s with two sound tracks (Hindi, Tamil) and two subtitle tracks of its own (English SubRip, Spanish ASS):
+# the file's own tracks in the Subtitles and Audio menus.
+printf '1\n00:00:00,500 --> 00:00:02,000\nFirst test line\n\n2\n00:00:02,500 --> 00:00:04,000\nSecond <i>test</i> line\n\n3\n00:00:05,000 --> 00:00:07,500\nThird test line\n' > tracks-en.srt
+printf '[Script Info]\nScriptType: v4.00+\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, Bold, Italic, Alignment, MarginL, MarginR, MarginV\nStyle: Default,Arial,20,&H00FFFFFF,0,0,2,10,10,10\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\i1}Primera{\i0} linea\Nde prueba\nDialogue: 0,0:00:04.00,0:00:06.00,Default,,0,0,0,,Segunda linea\n' > tracks-es.ass
+TRACKS="-f lavfi -i testsrc2=size=320x180:rate=25:duration=8 -f lavfi -i sine=frequency=440:duration=8:sample_rate=48000 -f lavfi -i sine=frequency=660:duration=8:sample_rate=48000 -i tracks-en.srt -i tracks-es.ass"
+ffmpeg $q $TRACKS -map 0 -map 1 -map 2 -map 3 -map 4 $out $H264 -c:a aac -b:a 48k -c:s copy \
+    -metadata:s:a:0 language=hin -metadata:s:a:1 language=tam -metadata:s:s:0 language=eng -metadata:s:s:1 language=spa -metadata:s:s:1 title=Spanish \
+    -disposition:s:0 0 -disposition:s:1 0 tracks.mkv
+rm tracks-en.srt tracks-es.ass
 # An AVI whose header is cut off after the first 4 KiB: FFmpeg cannot read it.
 head -c 4096 divx3.avi > broken.avi
 ffmpeg $q -f lavfi -i testsrc2=size=160x240:rate=1 -frames:v 1 -q:v 6 $out thumb.jpg

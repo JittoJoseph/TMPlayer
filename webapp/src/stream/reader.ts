@@ -104,6 +104,30 @@ export class TgFile {
         return out
     }
 
+    /**
+     * Bytes [start, end) for a reader beside playback (the embedded subtitles): served from memory
+     * when playback has them, else fetched after what playback waits on, without moving its
+     * read-ahead or dropping its jobs. Rejects when playback's seek drops the fetch.
+     */
+    async peek(start: number, end: number): Promise<Uint8Array> {
+        end = Math.min(end, this.size)
+        if (start >= end) return new Uint8Array(0)
+        const first = Math.floor(start / this.chunk)
+        const last = Math.floor((end - 1) / this.chunk)
+        const parts = await Promise.all(Array.from({ length: last - first + 1 }, (_, k) => this.get(first + k, false)))
+        const out = new Uint8Array(end - start)
+        let at = 0
+        for (let k = 0; k < parts.length; k++) {
+            const base = (first + k) * this.chunk
+            const from = Math.max(start, base) - base
+            const to = Math.min(end, base + parts[k].length) - base
+            if (to <= from) break
+            out.set(parts[k].subarray(from, to), at)
+            at += to - from
+        }
+        return at === out.length ? out : out.subarray(0, at)
+    }
+
     close() {
         this.closed = true
         for (const job of this.jobs.values()) job.abort.abort()

@@ -15,6 +15,7 @@ import { applyDelay, look, placeCues, lookVars, setLook, setSubDelay } from './c
 import { readLook } from './keep'
 import { loadThumb } from '../screens/thumbs'
 import { readSubtitle, SUBTITLE_EXTENSIONS, SubtitleError } from './subtitles'
+import { EmbeddedSubtitles, languageName } from './embedded-subs'
 import { api } from '../tg/rpc'
 import { t } from '../i18n'
 import { routeCrashes } from '../crash'
@@ -178,7 +179,21 @@ export function Player(props: {
         return e
     }
 
+    /** The file's own subtitle tracks (MKV, WebM), shown in the Subtitles menu. */
+    let embedded: EmbeddedSubtitles | null = null
+    const findSubtitles = async (f: TgFile, gen: number) => {
+        const subs = await EmbeddedSubtitles.open(f, video, () => (placeCues(video, controlsUp), applyDelay(video))).catch((e) => {
+            console.warn('[player] embedded subtitles', e)
+            return null
+        })
+        if (gen !== generation || closed || file !== f) return subs?.destroy()
+        embedded?.destroy()
+        embedded = subs
+    }
+
     const unload = () => {
+        embedded?.destroy()
+        embedded = null
         grabber()?.destroy()
         setGrabber(null)
         engine?.destroy()
@@ -251,12 +266,15 @@ export function Player(props: {
             setDetails(`${p.container}, ${p.mime.replace(/^[^;]*;\s*/, '')}. ${engine.detail}`)
             if (play) video.play().catch(() => {})
             void findChapters(f, gen)
+            void findSubtitles(f, gen)
             // The storyboard as soon as the video is open, so it is in by the time the bar is touched.
             void addStoryboard()
         } catch (e) {
             if (gen !== generation) return
             // A container mediabunny does not open at all goes to movi too.
-            if (e instanceof Unplayable && e.why.kind === 'format' && file === f) return void fallback(e, f, at, play, gen, rate).catch(fail)
+            // Not again when the fallbacks have had this file already: a second libav.js open of a
+            // damaged file never settled, and the loader spun for good.
+            if (e instanceof Unplayable && e.why.kind === 'format' && file === f && moviTried !== f.key) return void fallback(e, f, at, play, gen, rate).catch(fail)
             fail(e)
         }
     }
@@ -325,6 +343,7 @@ export function Player(props: {
         setDetails(e.detail)
         if (play) video.play().catch(() => {})
         void findChapters(f, gen)
+        void findSubtitles(f, gen)
         void addStoryboard()
     }
 
@@ -497,8 +516,8 @@ export function Player(props: {
     const qualityLabel = (height: number) => (height ? t('detail.telegram_quality', { quality: `${height}p` }) : t('web.quality_original'))
 
     const trackLabel = (tr: SoundTrack, i: number) => {
-        const lang = tr.languageCode && tr.languageCode !== 'und' ? tr.languageCode.toUpperCase() : ''
-        const parts = [tr.name, lang, codecName(tr), tr.numberOfChannels ? t('player.channels_count', { count: tr.numberOfChannels }) : ''].filter(Boolean)
+        const lang = languageName(tr.languageCode)
+        const parts = [lang, tr.name && tr.name !== lang ? tr.name : '', codecName(tr), tr.numberOfChannels ? t('player.channels_count', { count: tr.numberOfChannels }) : ''].filter(Boolean)
         return parts.length ? parts.join(', ') : t('player.track_number', { number: i + 1 })
     }
 

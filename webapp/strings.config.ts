@@ -490,6 +490,7 @@ export const PAGE_STRINGS = [
     'subtitles.size_small',
     'tracks.delay_none',
     'tracks.delay_step',
+    'tracks.forced',
     'tracks.reset_timing',
     'tracks.section_look',
     'tracks.section_timing',

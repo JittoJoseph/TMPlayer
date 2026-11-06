@@ -229,6 +229,7 @@ export function Chrome(props: { ctl: Ctl; children?: JSX.Element }) {
     listen('ratechange', () => setRate(v.playbackRate))
     v.textTracks.addEventListener('addtrack', readSubs)
     v.textTracks.addEventListener('change', readSubs)
+    v.textTracks.addEventListener('removetrack', readSubs)
     const onFullscreen = () => {
         setFullscreen(!!document.fullscreenElement)
         // Leaving full screen (the button, Esc, the system's back gesture) hands the turn back to the phone.
@@ -240,6 +241,7 @@ export function Chrome(props: { ctl: Ctl; children?: JSX.Element }) {
     onCleanup(() => {
         v.textTracks.removeEventListener('addtrack', readSubs)
         v.textTracks.removeEventListener('change', readSubs)
+        v.textTracks.removeEventListener('removetrack', readSubs)
         document.removeEventListener('fullscreenchange', onFullscreen)
         resize.disconnect()
     })
